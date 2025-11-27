@@ -251,7 +251,7 @@ gum_clear_cache (gpointer address,
 {
 #if defined (HAVE_ANDROID) && defined (HAVE_ARM)
   cacheflush (GPOINTER_TO_SIZE (address), GPOINTER_TO_SIZE (address + size), 0);
-#elif defined (HAVE_ARM) || defined (HAVE_ARM64) || defined (HAVE_MIPS)
+#elif defined (HAVE_ARM) || defined (HAVE_ARM64) || defined (HAVE_MIPS) || defined (HAVE_RISCV)
 # if defined (HAVE_CLEAR_CACHE)
   __builtin___clear_cache (address, address + size);
 # elif defined (HAVE_ARM) && !defined (__ARM_EABI__)

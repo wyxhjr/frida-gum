@@ -47,6 +47,12 @@ elif host_machine.cpu_family() == 'mips64'
   else
     host_abi = 'mips64'
   endif
+elif host_machine.cpu_family() == 'riscv32'
+  host_arch = 'riscv32'
+  host_abi = 'riscv32'
+elif host_machine.cpu_family() == 'riscv64'
+  host_arch = 'riscv64'
+  host_abi = 'riscv64'
 else
   host_arch = host_machine.cpu_family()
   host_abi = host_arch
@@ -188,6 +194,9 @@ cpu_defines = [
   ['arm64', 'HAVE_ARM64'],
   ['mips', 'HAVE_MIPS'],
   ['mips64', 'HAVE_MIPS'],
+  ['ppc', 'HAVE_PPC'],
+  ['riscv32', 'HAVE_RISCV'],
+  ['riscv64', 'HAVE_RISCV']
 ]
 foreach d : cpu_defines
   if d.get(0) == host_arch

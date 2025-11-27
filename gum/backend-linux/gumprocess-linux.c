@@ -789,6 +789,8 @@ gum_linux_do_modify_thread (gpointer data)
       : NT_ARM_HW_WATCH;
   gsize debug_regs_size = sizeof (struct user_hwdebug_state);
   guint debug_regs_count = 0;
+#elif defined (HAVE_RISCV)
+  guint debug_regs_count = 0;
 #endif
 #ifndef HAVE_MIPS
   guint i;
@@ -2527,6 +2529,47 @@ gum_linux_parse_ucontext (const ucontext_t * uc,
   ctx->lo = (guint32) uc->uc_mcontext.mdlo;
 
   ctx->pc = (guint32) uc->uc_mcontext.pc;
+#elif defined (HAVE_RISCV)
+  const unsigned long *gr = &uc -> uc_mcontext.__gregs;
+
+  ctx->pc = gr[0];
+  ctx->ra = gr[1];
+  ctx->sp = gr[2];
+  ctx->gp = gr[3];
+  ctx->tp = gr[4];
+
+  ctx->t0 = gr[5];
+  ctx->t1 = gr[6];
+  ctx->t2 = gr[7];
+  
+  ctx->s0 = gr[8];
+  ctx->s1 = gr[9];
+
+  ctx->a0 = gr[10];
+  ctx->a1 = gr[11];
+  ctx->a2 = gr[12];
+  ctx->a3 = gr[13];
+  ctx->a4 = gr[14];
+  ctx->a5 = gr[15];
+  ctx->a6 = gr[16];
+  ctx->a7 = gr[17];
+
+  ctx->s2 = gr[18];
+  ctx->s3 = gr[19];
+  ctx->s4 = gr[20];
+  ctx->s5 = gr[21];
+  ctx->s6 = gr[22];
+  ctx->s7 = gr[23];
+  ctx->s8 = gr[24];
+
+  ctx->s9 = gr[25];
+  ctx->s10 = gr[26];
+  ctx->s11 = gr[27];
+
+  ctx->t3 = gr[28];
+  ctx->t4 = gr[29];
+  ctx->t5 = gr[30];
+  ctx->t6 = gr[31];
 #else
 # error FIXME
 #endif
@@ -2694,6 +2737,47 @@ gum_linux_unparse_ucontext (const GumCpuContext * ctx,
   uc->uc_mcontext.mdlo = (guint64) ctx->lo;
 
   uc->uc_mcontext.pc = (guint64) ctx->pc;
+#elif defined (HAVE_RISCV)
+  unsigned long *gr = uc->uc_mcontext.__gregs;
+
+  gr[0] = ctx->pc;
+  gr[1] = ctx->ra;
+  gr[2] = ctx->sp;
+  gr[3] = ctx->gp;
+  gr[4] = ctx->tp;
+
+  gr[5] = ctx->t0;
+  gr[6] = ctx->t1;
+  gr[7] = ctx->t2;
+
+  gr[8] = ctx->s0;
+  gr[9] = ctx->s1;
+
+  gr[10] = ctx->a0;
+  gr[11] = ctx->a1;
+  gr[12] = ctx->a2;
+  gr[13] = ctx->a3;
+  gr[14] = ctx->a4;
+  gr[15] = ctx->a5;
+  gr[16] = ctx->a6;
+  gr[17] = ctx->a7;
+
+  gr[18] = ctx->s2;
+  gr[19] = ctx->s3;
+  gr[20] = ctx->s4;
+  gr[21] = ctx->s5;
+  gr[22] = ctx->s6;
+  gr[23] = ctx->s7;
+  gr[24] = ctx->s8;
+
+  gr[25] = ctx->s9;
+  gr[26] = ctx->s10;
+  gr[27] = ctx->s11;
+
+  gr[28] = ctx->t3;
+  gr[29] = ctx->t4;
+  gr[30] = ctx->t5; 
+  gr[31] = ctx->t6;
 #else
 # error FIXME
 #endif
@@ -4845,6 +4929,44 @@ gum_libc_clone (GumCloneFunc child_func,
       errno = retval;
     }
   }
+#elif defined (HAVE_RISCV)
+ * (--child_sp) = child_func;
+ * (--child_sp) = arg;
+
+ {
+
+  register        gssize a7 asm ("a7") = __NR_clone;
+  register          gint a0 asm ("a0") = flags;
+  register    gpointer * a1 asm ("a1") = child_sp;
+  register       pid_t * a2 asm ("a2") = parent_tidptr;
+  register GumUserDesc * a3 asm ("a3") = tls;
+  register       pid_t * a4 asm ("a4") = child_tidptr;
+
+  asm volatile(
+      "ecall\n\t"
+      "bnez a0, 1f\n\t"
+      "ld a0, 0(sp)\n\t"
+      "ld t0, 8(sp)\n\t"
+      "addi sp, sp, 1\n\t"
+
+      "jalr ra, t0, 0\n\t"
+      "li a7, %[_exit]\n\t"
+      "ecall\n\t"
+
+      "1'\n\t"
+      : "+r" (a0),
+        "r" (a1),
+        "r" (a2),
+        "r" (a3),
+        "r" (a4),
+        "r" (a7),
+        [exit] "i" (__NR_exit)
+      : "t0", "ra", "memory"
+    );
+
+    result = a0;
+
+ }
 #endif
 
   return result;
@@ -5039,6 +5161,26 @@ gum_libc_syscall_4 (gsize n,
       result = -1;
       errno = retval;
     }
+  }
+#elif defined (HAVE_RISCV)
+  {
+    register gssize a0 asm ("a0") = a;
+    register gssize a1 asm ("a1") = b;
+    register  gsize a2 asm ("a2") = c;
+    register  gsize a3 asm ("a3") = d;
+    register  gsize a7 asm ("a7") = n;
+
+    asm volatile (
+      "ecall\n\t"
+      : "+r" (a0)
+      : "r" (a1),
+        "r" (a2),
+        "r" (a3),
+        "r" (a7)
+      : "memory"
+    )
+
+    result = a0;
   }
 #endif
 

@@ -2,3 +2,10 @@
 /deps/
 /gum/backend-darwin/helpers/build/
 /subprojects/*
+
+# VSCode logs and settings
+.vscode/*.log
+.vscode/targets.log
+.vscode/configurationCache.log
+.vscode/dryrun.log
+.vscode/settings.json
